@@ -1,4 +1,4 @@
-#LOCO EM Simulation Repository
+# LOCO EM Simulation Repository
 
 This repository is for definition files and other associated files for ASU software containers intended to be built and transferred to HPC resources.
 
@@ -8,12 +8,12 @@ Building these containers requires sudo privileges and a working installation of
 
 To build a container from the definition file, run the following command:
 
-'''shell
+```shell
 sudo singularity build containername.sif containername.def
-'''
+```
 
 The created container may then be run on the local machine in a shell.
 
-'''shell
+```shell
 singularity shell containername.sif
-'''
+```
