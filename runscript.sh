@@ -34,6 +34,7 @@ if [ $filename = 'none' ]; then
   exit 1
 fi
 
+filedirname=$(cd $(dirname $filename) && pwd)
 outputdirbase=$(basename "$filename" .cst)
 
 echo "Start time: $starttime"
@@ -45,8 +46,7 @@ echo "Cores: $numcores"
 echo "Threads: $numthreads"
 echo "GPU: $numgpu"
 
-# make directory for output
-# make directory for output
+# make directory for output in the working directory.
 outputdirfull=$outputdirbase\_$outputdirdate
 if [ -d 'CST_Results' ]; then
     mkdir ./CST_Results/$outputdirfull
@@ -57,10 +57,12 @@ fi
 #run CST
 \time -f "Program: %C\nTotal time: %E\nUser Mode (s) %U\nKernel Mode (s) %S\nCPU: %P" /opt/cst/CST_Studio_Suite_2020/cst_design_environment --m --r --num-threads $numthreads --num-cpudevices $numcores --withgpu $numgpu "$filename" | tee ./CST_Results/$outputdirfull/runlog.txt
 
-#copy files
-cp -R $outputdirbase ./CST_Results/$outputdirfull
+#copy files from default results directory to unique directory
+#echo "$filedirname/$outputdirbase"
+cp -R $filedirname/$outputdirbase ./CST_Results/$outputdirfull
 endtime=$(date +"%c")
-
+#remove old directory
+rm -r $filedirname/$outputdirbase
 #output job data to summary txt file
 cat >> ./CST_Results/$outputdirfull/jobdata.txt << EOL
 "Start time: $starttime"
