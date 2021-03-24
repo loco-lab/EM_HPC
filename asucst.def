@@ -11,7 +11,7 @@ Stage: build
     export SINGULARITY_BIND="/cstsrc:/cst"
 
 %post
-    apt update && apt install -y netcat
+    apt update && apt install -y netcat && apt install -y nano
     apt install -y software-properties-common && apt install -y net-tools
     apt install -y libxcursor1 && apt install -y libxrandr2 && apt install -y libxss1
     apt install -y libasound2 && apt install -y libpci3 && apt install -y libxcb-xkb-dev
@@ -19,7 +19,16 @@ Stage: build
     apt install -y libfontenc1:amd64 && apt install -y libglu1-mesa:amd64 && apt install -y libsm6:amd64 && apt install -y libxcb-xfixes0:amd64
     apt install -y libxcomposite1:amd64 && apt install -y libxi6:amd64 && apt install -y libxrender1:amd64 && apt install -y libxslt1.1:amd64
     apt install -y libxtst6:amd64 && apt install -y lsb-core && apt install -y net-tools && apt install -y shared-mime-info && apt install -y xkb-data && apt install -y xvfb
-    apt install -y libnuma1 && apt install -y less
+    apt install -y libnuma1 && apt install -y less && apt install -y wget
+    DEBIAN_FRONTEND=noninteractive apt-get install -y keyboard-configuration
+    apt-get -y install linux-headers-$(uname -r)
+    distribution=$(. /etc/os-release;echo $ID$VERSION_ID | sed -e 's/\.//g')
+    wget https://developer.download.nvidia.com/compute/cuda/repos/$distribution/x86_64/cuda-$distribution.pin
+    mv cuda-$distribution.pin /etc/apt/preferences.d/cuda-repository-pin-600
+    apt-key adv --fetch-keys http://developer.download.nvidia.com/compute/cuda/repos/$distribution/x86_64/7fa2af80.pub
+    echo "deb http://developer.download.nvidia.com/compute/cuda/repos/$distribution/x86_64 /" | tee /etc/apt/sources.list.d/cuda.list
+    apt-get update
+    apt-get -y install cuda-drivers
 
     tar -xvf /cst/CST_S2_2020.SIMULIA_CST_Studio_Suite.Linux64.tar -C /cst
     /cst/SIMULIA_CST_Studio_Suite.Linux64/install.sh --nogui --replay /cst/installrecord
@@ -45,7 +54,7 @@ Stage: build
 
 %labels
     Author dmlewis@asu.edu
-    Version v0.0.1
+    Version v0.0.2
 
 %help
     This container was made to allow ASU personnel to run CST EM Simulation Software on any HPC environment.
