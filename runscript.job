@@ -1,12 +1,26 @@
 #!/bin/bash
 
+#Parameters for sbatch. Overridden by command line options.
+#SBATCH -N 1
+#SBATCH -p RM
+#SBATCH --ntasks-per-node=1
+#SBATCH -t 02:00
+
 # David Lewis
 # Arizona State University
 # 2021
 
+#v0.0.2
+
+#get job ID
+jobid=$SLURM_JOB_ID
+
+#echo commands to stdout
+set -x
 # Set default variables
 filename=${filename:-none}
-numcores=${numcores:-1}
+container=${container:-none}
+numcpu=${numcpu:-1}
 numthreads=${numthreads:-1}
 numgpu=${numgpu:-0}
 starttime=$(date +"%c")
@@ -18,8 +32,9 @@ while [ $# -gt 0 ]; do
   if [[ $1 == *"--"* ]]; then
     param="${1/--/}"
     # Check if parameter is valid
-    if [ $param != 'filename' ] && [ $param != 'numcores' ] && [ $param != 'numthreads' ] && [ $param != 'numgpu' ]; then
+    if [ $param != 'filename' ] && [ $param != 'container' ] && [ $param != 'numcpu' ] && [ $param != 'numthreads' ] && [ $param != 'numgpu' ]; then
         echo "Warning: Parameter $param not recognized."
+        exit 1
     else
         declare $param=$2
         echo $1 $2
@@ -32,17 +47,31 @@ done
 if [ $filename = 'none' ]; then
   echo "Error: no filename provided. Please input a filename with  the --filename parameter."
   exit 1
+elif [ ! -f $filename ]; then
+  echo "Error: File does not exist."
+  exit 1
+fi
+
+#check if CST file exists
+if [ $container = 'none' ]; then
+  echo "Error: no Singularity container provided. Please input a filename with  the --container parameter."
+  exit 1
+elif [ ! -f $container ]; then
+  echo "Error: Singularity Container does not exist."
+  exit 1
 fi
 
 filedirname=$(cd $(dirname $filename) && pwd)
 outputdirbase=$(basename "$filename" .cst)
 
+#echo inputs
 echo "Start time: $starttime"
 echo "Dir base: $outputdirbase"
 echo "Dir suffix: $outputdirdate"
 echo "Running CST job."
 echo "Filename: $filename"
-echo "Cores: $numcores"
+echo "Container: $container"
+echo "CPUs: $numcpu"
 echo "Threads: $numthreads"
 echo "GPU: $numgpu"
 
@@ -54,8 +83,15 @@ else
     mkdir ./CST_Results
     mkdir ./CST_Results/$outputdirfull
 fi
+
+#open ports for license server
+#Replace USERNAME with Enterprise username
+#Note that this requires the user to have generated keypairs using 'ssh-keygen -t rsa' and 'ssh-copy-id USERNAME@enterprise.sese.asu.edu'.
+ssh -f -N dmlewis@enterprise.sese.asu.edu -L localhost:27000:serverl189.sese.asu.edu:27000
+ssh -f -N dmlewis@enterprise.sese.asu.edu -L localhost:53615:serverl189.sese.asu.edu:53615
+
 #run CST
-\time -f "Program: %C\nTotal time: %E\nUser Mode (s) %U\nKernel Mode (s) %S\nCPU: %P" /opt/cst/CST_Studio_Suite_2020/cst_design_environment --m --r --num-threads $numthreads --num-cpudevices $numcores --withgpu $numgpu "$filename" | tee ./CST_Results/$outputdirfull/runlog.txt
+singularity exec $container \time -f "Program: %C\nTotal time: %E\nUser Mode (s) %U\nKernel Mode (s) %S\nCPU: %P" /opt/cst/CST_Studio_Suite_2020/cst_design_environment --m --r --num-threads $numthreads --num-cpudevices $numcpu --withgpu $numgpu "$filename" | tee ./CST_Results/$outputdirfull/runlog.txt
 
 #copy files from default results directory to unique directory
 #echo "$filedirname/$outputdirbase"
@@ -71,7 +107,10 @@ cat >> ./CST_Results/$outputdirfull/jobdata.txt << EOL
 "Dir suffix: $outputdirdate"
 "Running CST job."
 "Filename: $filename"
+echo "Container: $container"
 "Cores: $numcores"
 "Threads: $numthreads"
 "GPU: $numgpu"
 EOL
+
+sacct -j $jobid --format JobID,Elapsed,AllocCPUs,AllocNodes,CPUTime,systemCPU,UserCPU,TotalCPU,MaxRSS >> ./CST_Results/$outputdirfull/jobdata.txt
