@@ -4,7 +4,7 @@
 #SBATCH -N 1
 #SBATCH -p RM
 #SBATCH --ntasks-per-node=1
-#SBATCH -t 02:00
+#SBATCH -t 1:00:00
 
 # David Lewis
 # Arizona State University
@@ -14,7 +14,7 @@
 
 #get job ID
 jobid=$SLURM_JOB_ID
-
+echo "$jobid" >>jobid.txt
 #echo commands to stdout
 set -x
 # Set default variables
@@ -77,6 +77,7 @@ echo "GPU: $numgpu"
 
 # make directory for output in the working directory.
 outputdirfull=$outputdirbase\_$outputdirdate
+echo "$outputdirfull" >> outputdirfull.txt
 if [ -d 'CST_Results' ]; then
     mkdir ./CST_Results/$outputdirfull
 else
@@ -87,8 +88,8 @@ fi
 #open ports for license server
 #Replace USERNAME with Enterprise username
 #Note that this requires the user to have generated keypairs using 'ssh-keygen -t rsa' and 'ssh-copy-id USERNAME@enterprise.sese.asu.edu'.
-ssh -f -N dmlewis@enterprise.sese.asu.edu -L localhost:27000:serverl189.sese.asu.edu:27000
-ssh -f -N dmlewis@enterprise.sese.asu.edu -L localhost:53615:serverl189.sese.asu.edu:53615
+ssh -f -N USERNAME@enterprise.sese.asu.edu -L localhost:27000:serverl189.sese.asu.edu:27000
+ssh -f -N USERNAME@enterprise.sese.asu.edu -L localhost:53615:serverl189.sese.asu.edu:53615
 
 #run CST
 singularity exec $container \time -f "Program: %C\nTotal time: %E\nUser Mode (s) %U\nKernel Mode (s) %S\nCPU: %P" /opt/cst/CST_Studio_Suite_2020/cst_design_environment --m --r --num-threads $numthreads --num-cpudevices $numcpu --withgpu $numgpu "$filename" | tee ./CST_Results/$outputdirfull/runlog.txt
@@ -107,10 +108,8 @@ cat >> ./CST_Results/$outputdirfull/jobdata.txt << EOL
 "Dir suffix: $outputdirdate"
 "Running CST job."
 "Filename: $filename"
-echo "Container: $container"
+"Container: $container"
 "Cores: $numcores"
 "Threads: $numthreads"
 "GPU: $numgpu"
 EOL
-
-sacct -j $jobid --format JobID,Elapsed,AllocCPUs,AllocNodes,CPUTime,systemCPU,UserCPU,TotalCPU,MaxRSS >> ./CST_Results/$outputdirfull/jobdata.txt
