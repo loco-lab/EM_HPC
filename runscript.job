@@ -109,7 +109,7 @@ cat >> ./CST_Results/$outputdirfull/jobdata.txt << EOL
 "Running CST job."
 "Filename: $filename"
 "Container: $container"
-"Cores: $numcores"
+"CPU: $numcpu"
 "Threads: $numthreads"
 "GPU: $numgpu"
 EOL
